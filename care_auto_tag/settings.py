@@ -7,7 +7,7 @@ from django.core.signals import setting_changed
 from django.dispatch import receiver
 from rest_framework.settings import perform_import
 
-from care_auto_tag.apps import PLUGIN_NAME
+PLUGIN_NAME = "care_auto_tag"
 
 env = environ.Env()
 
@@ -27,7 +27,7 @@ class PluginSettings:  # pragma: no cover
 
     def __init__(
         self,
-        plugin_name: str = None,
+        plugin_name: str | None = None,
         defaults: dict | None = None,
         import_strings: set | None = None,
         required_settings: set | None = None,
@@ -43,7 +43,8 @@ class PluginSettings:  # pragma: no cover
 
     def __getattr__(self, attr) -> Any:
         if attr not in self.defaults:
-            raise AttributeError("Invalid setting: '%s'" % attr)
+            msg = f"Invalid setting: '{attr}'"
+            raise AttributeError(msg)
 
         # Try to find the setting from user settings, then from environment variables
         val = self.defaults[attr]
@@ -81,10 +82,11 @@ class PluginSettings:  # pragma: no cover
         """
         for setting in self.required_settings:
             if not getattr(self, setting):
-                raise ImproperlyConfigured(
+                msg = (
                     f'The "{setting}" setting is required. '
                     f'Please set the "{setting}" in the environment or the {PLUGIN_NAME} plugin config.'
                 )
+                raise ImproperlyConfigured(msg)
 
     def reload(self) -> None:
         """
@@ -98,11 +100,11 @@ class PluginSettings:  # pragma: no cover
 
 
 REQUIRED_SETTINGS = {
-    "AUTO_TAG_CONSENT_MISSING_TAG_ID",
+    "AUTO_TAG_MISSING_CONSENT_TAG_ID",
 }
 
 DEFAULTS = {
-    "AUTO_TAG_CONSENT_MISSING_TAG_ID": "",
+    "AUTO_TAG_MISSING_CONSENT_TAG_ID": "",
 }
 
 plugin_settings = PluginSettings(
