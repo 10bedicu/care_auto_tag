@@ -1,13 +1,9 @@
 import logging
 
 from django.apps import AppConfig
+from django.db.models.signals import post_migrate
 from django.utils.translation import gettext_lazy as _
 
-from care.emr.resources.tag.config_spec import (
-    TagCategoryChoices,
-    TagResource,
-    TagStatus,
-)
 from care_auto_tag.settings import PLUGIN_NAME
 from care_auto_tag.settings import plugin_settings as settings
 
@@ -19,9 +15,20 @@ class CareAutoTagConfig(AppConfig):
     verbose_name = _("Care Auto Tag")
 
     def ready(self):
-        from care.emr.models.tag_config import TagConfig
+        def init_missing_consent_tag_config(**kwargs):
+            if not settings.AUTO_TAG_MISSING_CONSENT_TAG_ID:
+                logger.warning(
+                    "Skipping 'Missing consent' tag config initialization as AUTO_TAG_CONSENT_MISSING_TAG_ID is not set"
+                )
+                return
 
-        if settings.AUTO_TAG_MISSING_CONSENT_TAG_ID:
+            from care.emr.models.tag_config import TagConfig
+            from care.emr.resources.tag.config_spec import (
+                TagCategoryChoices,
+                TagResource,
+                TagStatus,
+            )
+
             missing_consent_tag = TagConfig.objects.filter(
                 external_id=settings.AUTO_TAG_MISSING_CONSENT_TAG_ID
             ).first()
@@ -31,27 +38,31 @@ class CareAutoTagConfig(AppConfig):
                 and missing_consent_tag.meta.get("owner") != "care_auto_tag"
             ):
                 logger.error(
-                    "Tag with external_id {settings.AUTO_TAG_MISSING_CONSENT_TAG_ID} already exists, please change the external_id"
+                    "Tag config with external_id {settings.AUTO_TAG_MISSING_CONSENT_TAG_ID} already exists, please change the external_id"
                 )
                 raise ValueError(
-                    "Tag with external_id {settings.AUTO_TAG_MISSING_CONSENT_TAG_ID} already exists, please change the external_id"
+                    "Tag config with external_id {settings.AUTO_TAG_MISSING_CONSENT_TAG_ID} already exists, please change the external_id"
                 )
 
-            if not missing_consent_tag:
-                TagConfig.objects.create(
-                    external_id=settings.AUTO_TAG_MISSING_CONSENT_TAG_ID,
-                    category=TagCategoryChoices.advance_directive,
-                    description="This is a system generated tag to tag encounters that do not have a consent",
-                    display="Missing Consent",
-                    priority=1,
-                    resource=TagResource.encounter,
-                    status=TagStatus.active,
-                    meta={"owner": "care_auto_tag", "variant": "danger"},
-                )
+            instance, created = TagConfig.objects.update_or_create(
+                external_id=settings.AUTO_TAG_MISSING_CONSENT_TAG_ID,
+                defaults={
+                    "category": TagCategoryChoices.advance_directive,
+                    "resource": TagResource.encounter,
+                    "status": TagStatus.active,
+                    "display": "Missing Consent",
+                    "description": "This is a system generated tag to tag encounters that do not have a consent",
+                    "priority": 1,
+                    "meta": {"owner": "care_auto_tag", "variant": "danger"},
+                },
+            )
+            action = "created" if created else "updated"
+            logger.info(
+                "Missing Consent tag config %s (external_id=%s)",
+                action,
+                str(instance.external_id),
+            )
 
             import care_auto_tag.signals.manage_missing_consent_tag  # noqa F401
 
-        else:
-            logger.warning(
-                "Skipping 'Missing consent' tag initialization as AUTO_TAG_CONSENT_MISSING_TAG_ID is not set"
-            )
+        post_migrate.connect(init_missing_consent_tag_config, sender=self)
