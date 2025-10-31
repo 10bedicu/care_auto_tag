@@ -41,7 +41,7 @@ class CareAutoTagConfig(AppConfig):
                     priority=1,
                     resource="encounter",
                     status="active",
-                    meta={"owner": "care_auto_tag"},
+                    meta={"owner": "care_auto_tag", "variant": "danger"},
                 )
 
             import care_auto_tag.signals.manage_missing_consent_tag  # noqa F401
