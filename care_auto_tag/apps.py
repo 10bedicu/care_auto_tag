@@ -3,6 +3,11 @@ import logging
 from django.apps import AppConfig
 from django.utils.translation import gettext_lazy as _
 
+from care.emr.resources.tag.config_spec import (
+    TagCategoryChoices,
+    TagResource,
+    TagStatus,
+)
 from care_auto_tag.settings import PLUGIN_NAME
 from care_auto_tag.settings import plugin_settings as settings
 
@@ -35,12 +40,12 @@ class CareAutoTagConfig(AppConfig):
             if not missing_consent_tag:
                 TagConfig.objects.create(
                     external_id=settings.AUTO_TAG_MISSING_CONSENT_TAG_ID,
-                    category="advance_directive",
+                    category=TagCategoryChoices.advance_directive,
                     description="This is a system generated tag to tag encounters that do not have a consent",
                     display="Missing Consent",
                     priority=1,
-                    resource="encounter",
-                    status="active",
+                    resource=TagResource.encounter,
+                    status=TagStatus.active,
                     meta={"owner": "care_auto_tag", "variant": "danger"},
                 )
 
