@@ -53,7 +53,7 @@ class CareAutoTagConfig(AppConfig):
                     "display": "Missing Consent",
                     "description": "This is a system generated tag to tag encounters that do not have a consent",
                     "priority": 1,
-                    "meta": {"owner": "care_auto_tag", "variant": "danger"},
+                    "meta": {"owner": "care_auto_tag", "color": "#e7000b"},
                 },
             )
             action = "created" if created else "updated"
