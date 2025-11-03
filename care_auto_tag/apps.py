@@ -15,6 +15,13 @@ class CareAutoTagConfig(AppConfig):
     verbose_name = _("Care Auto Tag")
 
     def ready(self):
+        if not settings.AUTO_TAG_MISSING_CONSENT_TAG_ID:
+            logger.warning(
+                "Skipping signal registration as AUTO_TAG_MISSING_CONSENT_TAG_ID is not set"
+            )
+        else:
+            import care_auto_tag.signals.manage_missing_consent_tag  # noqa: F401
+
         def init_missing_consent_tag_config(**kwargs):
             if not settings.AUTO_TAG_MISSING_CONSENT_TAG_ID:
                 logger.warning(
@@ -62,7 +69,5 @@ class CareAutoTagConfig(AppConfig):
                 action,
                 str(instance.external_id),
             )
-
-            import care_auto_tag.signals.manage_missing_consent_tag  # noqa F401
 
         post_migrate.connect(init_missing_consent_tag_config, sender=self)
